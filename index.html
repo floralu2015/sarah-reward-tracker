@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sarah's Reward Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #8B5CF6;
+            --primary-light: #A78BFA;
+            --secondary: #FBBF24;
+            --success: #10B981;
+            --danger: #F87171;
+            --danger-dark: #EF4444;
+            --bg-gradient: linear-gradient(135deg, #E9D5FF 0%, #FBCFE8 50%, #FDE68A 100%);
+            --card-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header h1 .star {
+            animation: twinkle 1.5s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* Balance Card */
+        .balance-card {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .balance-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .balance-label {
+            font-size: 14px;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .balance-amount {
+            font-size: 56px;
+            font-weight: 700;
+            color: var(--primary);
+            position: relative;
+        }
+
+        .balance-amount.negative {
+            color: var(--danger-dark);
+        }
+
+        /* Piano Progress */
+        .piano-progress {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+        }
+
+        .piano-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .piano-title {
+            font-size: 16px;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .piano-stats {
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 16px;
+            background: #E5E7EB;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .progress-fill.complete {
+            background: linear-gradient(90deg, var(--success) 0%, #34D399 100%);
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .week-dates {
+            font-size: 12px;
+            color: #9CA3AF;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .action-btn {
+            background: white;
+            border: none;
+            border-radius: 16px;
+            padding: 20px 12px;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(139, 92, 246, 0.2);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+        }
+
+        .action-btn .icon {
+            font-size: 32px;
+        }
+
+        .action-btn .label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .action-btn.piano { border-bottom: 4px solid var(--primary); }
+        .action-btn.test { border-bottom: 4px solid var(--success); }
+        .action-btn.incident { border-bottom: 4px solid var(--danger); }
+
+        /* History Section */
+        .history-section {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .history-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .filter-btn {
+            background: #F3F4F6;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #6B7280;
+            cursor: pointer;
+        }
+
+        .filter-btn:hover {
+            background: #E5E7EB;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #F9FAFB;
+            border-radius: 12px;
+            gap: 12px;
+            position: relative;
+        }
+
+        .history-item .icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .history-item .details {
+            flex: 1;
+        }
+
+        .history-item .description {
+            font-size: 14px;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .history-item .date {
+            font-size: 12px;
+            color: #9CA3AF;
+        }
+
+        .history-item .amount {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .history-item .amount.positive {
+            color: var(--success);
+        }
+
+        .history-item .amount.negative {
+            color: var(--danger-dark);
+        }
+
+        .history-item .delete-btn {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            background: none;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0.3;
+            transition: opacity 0.2s;
+            padding: 4px;
+        }
+
+        .history-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #9CA3AF;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #9CA3AF;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .submit-btn.success {
+            background: var(--success);
+            color: white;
+        }
+
+        .submit-btn.danger {
+            background: var(--danger-dark);
+            color: white;
+        }
+
+        /* Confetti */
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2000;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100%) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1F2937;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 3000;
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Delete Confirmation Modal */
+        .confirm-text {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #374151;
+            font-size: 16px;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .confirm-buttons .submit-btn {
+            flex: 1;
+        }
+
+        .cancel-btn {
+            background: #E5E7EB;
+            color: #374151;
+        }
+
+        /* Reset Button */
+        .reset-section {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .reset-btn {
+            background: none;
+            border: none;
+            color: #9CA3AF;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 16px;
+        }
+
+        .reset-btn:hover {
+            color: var(--danger-dark);
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <span class="star">⭐</span>
+                Sarah's Rewards
+                <span class="star">⭐</span>
+            </h1>
+        </div>
+
+        <!-- Balance Card -->
+        <div class="balance-card">
+            <div class="balance-label">Current Balance</div>
+            <div class="balance-amount" id="balanceAmount">$0</div>
+        </div>
+
+        <!-- Piano Progress -->
+        <div class="piano-progress">
+            <div class="piano-header">
+                <div class="piano-title">🎹 Piano This Week</div>
+                <div class="piano-stats" id="pianoStats">0 / 150 min</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="pianoProgressFill" style="width: 0%"></div>
+            </div>
+            <div class="week-dates" id="weekDates"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="action-btn piano" onclick="openModal('piano')">
+                <span class="icon">🎹</span>
+                <span class="label">Log Piano</span>
+            </button>
+            <button class="action-btn test" onclick="openModal('test')">
+                <span class="icon">📝</span>
+                <span class="label">Log Test</span>
+            </button>
+            <button class="action-btn incident" onclick="openModal('incident')">
+                <span class="icon">😢</span>
+                <span class="label">Log Incident</span>
+            </button>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section">
+            <div class="history-header">
+                <div class="history-title">Recent Activity</div>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="empty-state">
+                    <div class="icon">📋</div>
+                    <div>No activity yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reset Section -->
+        <div class="reset-section">
+            <button class="reset-btn" onclick="openModal('reset')">Reset All Data</button>
+        </div>
+    </div>
+
+    <!-- Piano Modal -->
+    <div class="modal-overlay" id="pianoModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">🎹 Log Piano Practice</div>
+                <button class="modal-close" onclick="closeModal('piano')">&times;</button>
+            </div>
+            <form onsubmit="submitPiano(event)">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="pianoDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Minutes Practiced</label>
+                    <input type="number" class="form-input" id="pianoMinutes" min="1" max="240" placeholder="30" required>
+                </div>
+                <button type="submit" class="submit-btn primary">Log Practice ✨</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Test Modal -->
+    <div class="modal-overlay" id="testModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">📝 Log Test Score</div>
+                <button class="modal-close" onclick="closeModal('test')">&times;</button>
+            </div>
+            <form onsubmit="submitTest(event)">
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <input type="text" class="form-input" id="testSubject" placeholder="Math" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="testDate" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Score</label>
+                        <input type="number" class="form-input" id="testScore" min="0" placeholder="97" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Out of</label>
+                        <input type="number" class="form-input" id="testMaxScore" min="1" placeholder="100" required>
+                    </div>
+                </div>
+                <button type="submit" class="submit-btn success">Log Score ✨</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Incident Modal -->
+    <div class="modal-overlay" id="incidentModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">😢 Log Incident</div>
+                <button class="modal-close" onclick="closeModal('incident')">&times;</button>
+            </div>
+            <form onsubmit="submitIncident(event)">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="incidentDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Note (optional)</label>
+                    <input type="text" class="form-input" id="incidentNote" placeholder="What happened?">
+                </div>
+                <p style="color: #6B7280; font-size: 14px; margin-bottom: 16px; text-align: center;">
+                    This will deduct <strong style="color: var(--danger-dark);">$50</strong> from the balance.
+                </p>
+                <button type="submit" class="submit-btn danger">Log Incident</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">🗑️ Delete Entry</div>
+                <button class="modal-close" onclick="closeModal('delete')">&times;</button>
+            </div>
+            <p class="confirm-text">Are you sure you want to delete this entry? This will adjust the balance accordingly.</p>
+            <div class="confirm-buttons">
+                <button class="submit-btn cancel-btn" onclick="closeModal('delete')">Cancel</button>
+                <button class="submit-btn danger" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div class="modal-overlay" id="resetModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">⚠️ Reset All Data</div>
+                <button class="modal-close" onclick="closeModal('reset')">&times;</button>
+            </div>
+            <p class="confirm-text">Are you sure you want to reset all data? This cannot be undone.</p>
+            <div class="confirm-buttons">
+                <button class="submit-btn cancel-btn" onclick="closeModal('reset')">Cancel</button>
+                <button class="submit-btn danger" onclick="confirmReset()">Reset Everything</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confetti Container -->
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Data Management
+        const STORAGE_KEY = 'sarahRewardTracker';
+
+        function getDefaultData() {
+            return {
+                balance: 0,
+                pianoSessions: [],
+                weeklyAwards: [],
+                tests: [],
+                incidents: [],
+                transactions: []
+            };
+        }
+
+        function loadData() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored ? JSON.parse(stored) : getDefaultData();
+        }
+
+        function saveData(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        // Week Helpers
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+            return new Date(d.setDate(diff)).toISOString().split('T')[0];
+        }
+
+        function getWeekEnd(weekStart) {
+            const d = new Date(weekStart);
+            d.setDate(d.getDate() + 6);
+            return d.toISOString().split('T')[0];
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function formatDateLong(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // UI Updates
+        function updateUI() {
+            const data = loadData();
+            updateBalance(data);
+            updatePianoProgress(data);
+            updateHistory(data);
+        }
+
+        function updateBalance(data) {
+            const el = document.getElementById('balanceAmount');
+            const balance = data.balance;
+            el.textContent = balance >= 0 ? `$${balance}` : `-$${Math.abs(balance)}`;
+            el.classList.toggle('negative', balance < 0);
+        }
+
+        function updatePianoProgress(data) {
+            const today = new Date().toISOString().split('T')[0];
+            const weekStart = getWeekStart(today);
+            const weekEnd = getWeekEnd(weekStart);
+
+            // Calculate minutes this week
+            const weekMinutes = data.pianoSessions
+                .filter(s => s.date >= weekStart && s.date <= weekEnd)
+                .reduce((sum, s) => sum + s.minutes, 0);
+
+            const goal = 150;
+            const percent = Math.min((weekMinutes / goal) * 100, 100);
+            const isComplete = weekMinutes >= goal;
+
+            document.getElementById('pianoStats').textContent = `${weekMinutes} / ${goal} min`;
+
+            const fill = document.getElementById('pianoProgressFill');
+            fill.style.width = `${percent}%`;
+            fill.classList.toggle('complete', isComplete);
+
+            document.getElementById('weekDates').textContent =
+                `Week of ${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
+        }
+
+        function updateHistory(data) {
+            const list = document.getElementById('historyList');
+
+            if (data.transactions.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📋</div>
+                        <div>No activity yet</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort by date descending, then by id descending
+            const sorted = [...data.transactions].sort((a, b) => {
+                if (b.date !== a.date) return b.date.localeCompare(a.date);
+                return b.id.localeCompare(a.id);
+            });
+
+            list.innerHTML = sorted.slice(0, 20).map(t => {
+                const icon = t.type === 'piano' ? '🎹' : t.type === 'test' ? '📝' : '😢';
+                const amountClass = t.amount >= 0 ? 'positive' : 'negative';
+                const amountText = t.amount >= 0 ? `+$${t.amount}` : `-$${Math.abs(t.amount)}`;
+
+                return `
+                    <div class="history-item">
+                        <div class="icon">${icon}</div>
+                        <div class="details">
+                            <div class="description">${t.description}</div>
+                            <div class="date">${formatDateLong(t.date)}</div>
+                        </div>
+                        <div class="amount ${amountClass}">${amountText}</div>
+                        <button class="delete-btn" onclick="deleteEntry('${t.id}')" title="Delete">🗑️</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Modal Management
+        function openModal(type) {
+            const modal = document.getElementById(`${type}Modal`);
+            modal.classList.add('active');
+
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            if (type === 'piano') document.getElementById('pianoDate').value = today;
+            if (type === 'test') document.getElementById('testDate').value = today;
+            if (type === 'incident') document.getElementById('incidentDate').value = today;
+        }
+
+        function closeModal(type) {
+            const modal = document.getElementById(`${type}Modal`);
+            modal.classList.remove('active');
+        }
+
+        // Close modal on outside click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+
+        // Form Submissions
+        function submitPiano(e) {
+            e.preventDefault();
+            const date = document.getElementById('pianoDate').value;
+            const minutes = parseInt(document.getElementById('pianoMinutes').value);
+
+            const data = loadData();
+
+            // Add piano session
+            data.pianoSessions.push({
+                id: generateId(),
+                date,
+                minutes
+            });
+
+            // Check if weekly goal just met
+            const weekStart = getWeekStart(date);
+            const weekEnd = getWeekEnd(weekStart);
+            const weekMinutes = data.pianoSessions
+                .filter(s => s.date >= weekStart && s.date <= weekEnd)
+                .reduce((sum, s) => sum + s.minutes, 0);
+
+            const alreadyAwarded = data.weeklyAwards.some(w => w.weekStart === weekStart);
+
+            if (weekMinutes >= 150 && !alreadyAwarded) {
+                // Award for this week!
+                data.weeklyAwards.push({ weekStart, awarded: true });
+                data.balance += 50;
+                data.transactions.push({
+                    id: generateId(),
+                    date,
+                    type: 'piano',
+                    amount: 50,
+                    description: `Weekly piano goal met! (${weekMinutes} min)`
+                });
+                showConfetti();
+                showToast('🎉 Weekly goal achieved! +$50');
+            } else {
+                showToast(`✨ Logged ${minutes} minutes of practice!`);
+            }
+
+            saveData(data);
+            updateUI();
+            closeModal('piano');
+
+            // Reset form
+            document.getElementById('pianoMinutes').value = '';
+        }
+
+        function submitTest(e) {
+            e.preventDefault();
+            const subject = document.getElementById('testSubject').value;
+            const date = document.getElementById('testDate').value;
+            const score = parseInt(document.getElementById('testScore').value);
+            const maxScore = parseInt(document.getElementById('testMaxScore').value);
+            const percentage = (score / maxScore) * 100;
+
+            const data = loadData();
+            const awarded = percentage >= 95;
+
+            data.tests.push({
+                id: generateId(),
+                date,
+                subject,
+                score,
+                maxScore,
+                awarded
+            });
+
+            if (awarded) {
+                data.balance += 100;
+                data.transactions.push({
+                    id: generateId(),
+                    date,
+                    type: 'test',
+                    amount: 100,
+                    description: `${subject} test: ${score}/${maxScore} (${percentage.toFixed(0)}%)`
+                });
+                showConfetti();
+                showToast(`🎉 Amazing score! +$100`);
+            } else {
+                showToast(`📝 Test logged: ${percentage.toFixed(0)}%`);
+            }
+
+            saveData(data);
+            updateUI();
+            closeModal('test');
+
+            // Reset form
+            document.getElementById('testSubject').value = '';
+            document.getElementById('testScore').value = '';
+            document.getElementById('testMaxScore').value = '';
+        }
+
+        function submitIncident(e) {
+            e.preventDefault();
+            const date = document.getElementById('incidentDate').value;
+            const note = document.getElementById('incidentNote').value;
+
+            const data = loadData();
+
+            data.incidents.push({
+                id: generateId(),
+                date,
+                note
+            });
+
+            data.balance -= 50;
+            data.transactions.push({
+                id: generateId(),
+                date,
+                type: 'incident',
+                amount: -50,
+                description: note ? `Incident: ${note}` : 'Crying incident'
+            });
+
+            saveData(data);
+            updateUI();
+            closeModal('incident');
+            showToast('😔 Incident logged. -$50');
+
+            // Reset form
+            document.getElementById('incidentNote').value = '';
+        }
+
+        // Delete Entry
+        let pendingDeleteId = null;
+
+        function deleteEntry(id) {
+            pendingDeleteId = id;
+            openModal('delete');
+        }
+
+        function confirmDelete() {
+            if (!pendingDeleteId) return;
+
+            const data = loadData();
+            const transaction = data.transactions.find(t => t.id === pendingDeleteId);
+
+            if (transaction) {
+                // Reverse the balance change
+                data.balance -= transaction.amount;
+
+                // Remove transaction
+                data.transactions = data.transactions.filter(t => t.id !== pendingDeleteId);
+
+                // If it was a piano award, remove the weekly award too
+                if (transaction.type === 'piano' && transaction.amount > 0) {
+                    const weekStart = getWeekStart(transaction.date);
+                    data.weeklyAwards = data.weeklyAwards.filter(w => w.weekStart !== weekStart);
+                }
+
+                saveData(data);
+                updateUI();
+                showToast('Entry deleted');
+            }
+
+            closeModal('delete');
+            pendingDeleteId = null;
+        }
+
+        // Reset All Data
+        function confirmReset() {
+            localStorage.removeItem(STORAGE_KEY);
+            updateUI();
+            closeModal('reset');
+            showToast('All data has been reset');
+        }
+
+        // Confetti Effect
+        function showConfetti() {
+            const container = document.getElementById('confettiContainer');
+            const colors = ['#8B5CF6', '#FBBF24', '#10B981', '#F87171', '#60A5FA', '#F472B6'];
+
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                container.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 3500);
+            }
+        }
+
+        // Toast Notification
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Initialize
+        updateUI();
+    </script>
+</body>
+</html>
