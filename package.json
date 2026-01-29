@@ -1,0 +1,12 @@
+{
+  "name": "reward-tracker",
+  "version": "1.0.0",
+  "description": "Sarah's Money Reward Tracker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
