@@ -739,31 +739,26 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // Data Management
-        const STORAGE_KEY = 'sarahRewardTracker';
+        // Data Management - Using Server API
+        let appData = {
+            balance: 0,
+            pianoSessions: [],
+            weeklyAwards: [],
+            tests: [],
+            incidents: [],
+            transactions: []
+        };
 
-        function getDefaultData() {
-            return {
-                balance: 0,
-                pianoSessions: [],
-                weeklyAwards: [],
-                tests: [],
-                incidents: [],
-                transactions: []
-            };
-        }
-
-        function loadData() {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            return stored ? JSON.parse(stored) : getDefaultData();
-        }
-
-        function saveData(data) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        }
-
-        function generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        async function fetchData() {
+            try {
+                const response = await fetch('/api/data');
+                if (response.ok) {
+                    appData = await response.json();
+                }
+            } catch (err) {
+                console.error('Error fetching data:', err);
+            }
+            return appData;
         }
 
         // Week Helpers
@@ -791,11 +786,11 @@
         }
 
         // UI Updates
-        function updateUI() {
-            const data = loadData();
-            updateBalance(data);
-            updatePianoProgress(data);
-            updateHistory(data);
+        async function updateUI() {
+            await fetchData();
+            updateBalance(appData);
+            updatePianoProgress(appData);
+            updateHistory(appData);
         }
 
         function updateBalance(data) {
@@ -810,9 +805,12 @@
             const weekStart = getWeekStart(today);
             const weekEnd = getWeekEnd(weekStart);
 
-            // Calculate minutes this week
+            // Calculate minutes this week - handle date format from DB
             const weekMinutes = data.pianoSessions
-                .filter(s => s.date >= weekStart && s.date <= weekEnd)
+                .filter(s => {
+                    const sessionDate = s.date.split('T')[0];
+                    return sessionDate >= weekStart && sessionDate <= weekEnd;
+                })
                 .reduce((sum, s) => sum + s.minutes, 0);
 
             const goal = 150;
@@ -842,26 +840,21 @@
                 return;
             }
 
-            // Sort by date descending, then by id descending
-            const sorted = [...data.transactions].sort((a, b) => {
-                if (b.date !== a.date) return b.date.localeCompare(a.date);
-                return b.id.localeCompare(a.id);
-            });
-
-            list.innerHTML = sorted.slice(0, 20).map(t => {
+            list.innerHTML = data.transactions.slice(0, 20).map(t => {
                 const icon = t.type === 'piano' ? '🎹' : t.type === 'test' ? '📝' : '😢';
                 const amountClass = t.amount >= 0 ? 'positive' : 'negative';
                 const amountText = t.amount >= 0 ? `+$${t.amount}` : `-$${Math.abs(t.amount)}`;
+                const dateStr = t.date.split('T')[0];
 
                 return `
                     <div class="history-item">
                         <div class="icon">${icon}</div>
                         <div class="details">
                             <div class="description">${t.description}</div>
-                            <div class="date">${formatDateLong(t.date)}</div>
+                            <div class="date">${formatDateLong(dateStr)}</div>
                         </div>
                         <div class="amount ${amountClass}">${amountText}</div>
-                        <button class="delete-btn" onclick="deleteEntry('${t.id}')" title="Delete">🗑️</button>
+                        <button class="delete-btn" onclick="deleteEntry(${t.id})" title="Delete">🗑️</button>
                     </div>
                 `;
             }).join('');
@@ -894,128 +887,88 @@
         });
 
         // Form Submissions
-        function submitPiano(e) {
+        async function submitPiano(e) {
             e.preventDefault();
             const date = document.getElementById('pianoDate').value;
             const minutes = parseInt(document.getElementById('pianoMinutes').value);
 
-            const data = loadData();
-
-            // Add piano session
-            data.pianoSessions.push({
-                id: generateId(),
-                date,
-                minutes
-            });
-
-            // Check if weekly goal just met
-            const weekStart = getWeekStart(date);
-            const weekEnd = getWeekEnd(weekStart);
-            const weekMinutes = data.pianoSessions
-                .filter(s => s.date >= weekStart && s.date <= weekEnd)
-                .reduce((sum, s) => sum + s.minutes, 0);
-
-            const alreadyAwarded = data.weeklyAwards.some(w => w.weekStart === weekStart);
-
-            if (weekMinutes >= 150 && !alreadyAwarded) {
-                // Award for this week!
-                data.weeklyAwards.push({ weekStart, awarded: true });
-                data.balance += 50;
-                data.transactions.push({
-                    id: generateId(),
-                    date,
-                    type: 'piano',
-                    amount: 50,
-                    description: `Weekly piano goal met! (${weekMinutes} min)`
+            try {
+                const response = await fetch('/api/piano', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, minutes })
                 });
-                showConfetti();
-                showToast('🎉 Weekly goal achieved! +$50');
-            } else {
-                showToast(`✨ Logged ${minutes} minutes of practice!`);
+                const result = await response.json();
+
+                if (result.awarded) {
+                    showConfetti();
+                    showToast('🎉 Weekly goal achieved! +$50');
+                } else {
+                    showToast(`✨ Logged ${minutes} minutes of practice!`);
+                }
+
+                await updateUI();
+                closeModal('piano');
+                document.getElementById('pianoMinutes').value = '';
+            } catch (err) {
+                console.error('Error logging piano:', err);
+                showToast('Error logging practice');
             }
-
-            saveData(data);
-            updateUI();
-            closeModal('piano');
-
-            // Reset form
-            document.getElementById('pianoMinutes').value = '';
         }
 
-        function submitTest(e) {
+        async function submitTest(e) {
             e.preventDefault();
             const subject = document.getElementById('testSubject').value;
             const date = document.getElementById('testDate').value;
             const score = parseInt(document.getElementById('testScore').value);
             const maxScore = parseInt(document.getElementById('testMaxScore').value);
-            const percentage = (score / maxScore) * 100;
 
-            const data = loadData();
-            const awarded = percentage >= 95;
-
-            data.tests.push({
-                id: generateId(),
-                date,
-                subject,
-                score,
-                maxScore,
-                awarded
-            });
-
-            if (awarded) {
-                data.balance += 100;
-                data.transactions.push({
-                    id: generateId(),
-                    date,
-                    type: 'test',
-                    amount: 100,
-                    description: `${subject} test: ${score}/${maxScore} (${percentage.toFixed(0)}%)`
+            try {
+                const response = await fetch('/api/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, subject, score, maxScore })
                 });
-                showConfetti();
-                showToast(`🎉 Amazing score! +$100`);
-            } else {
-                showToast(`📝 Test logged: ${percentage.toFixed(0)}%`);
+                const result = await response.json();
+
+                if (result.awarded) {
+                    showConfetti();
+                    showToast(`🎉 Amazing score! +$100`);
+                } else {
+                    showToast(`📝 Test logged: ${result.percentage.toFixed(0)}%`);
+                }
+
+                await updateUI();
+                closeModal('test');
+                document.getElementById('testSubject').value = '';
+                document.getElementById('testScore').value = '';
+                document.getElementById('testMaxScore').value = '';
+            } catch (err) {
+                console.error('Error logging test:', err);
+                showToast('Error logging test');
             }
-
-            saveData(data);
-            updateUI();
-            closeModal('test');
-
-            // Reset form
-            document.getElementById('testSubject').value = '';
-            document.getElementById('testScore').value = '';
-            document.getElementById('testMaxScore').value = '';
         }
 
-        function submitIncident(e) {
+        async function submitIncident(e) {
             e.preventDefault();
             const date = document.getElementById('incidentDate').value;
             const note = document.getElementById('incidentNote').value;
 
-            const data = loadData();
+            try {
+                await fetch('/api/incident', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, note })
+                });
 
-            data.incidents.push({
-                id: generateId(),
-                date,
-                note
-            });
-
-            data.balance -= 50;
-            data.transactions.push({
-                id: generateId(),
-                date,
-                type: 'incident',
-                amount: -50,
-                description: note ? `Incident: ${note}` : 'Crying incident'
-            });
-
-            saveData(data);
-            updateUI();
-            closeModal('incident');
-            showToast('😔 Incident logged. -$50');
-
-            // Reset form
-            document.getElementById('incidentNote').value = '';
+                await updateUI();
+                closeModal('incident');
+                showToast('😔 Incident logged. -$50');
+                document.getElementById('incidentNote').value = '';
+            } catch (err) {
+                console.error('Error logging incident:', err);
+                showToast('Error logging incident');
+            }
         }
 
         // Delete Entry
@@ -1026,28 +979,18 @@
             openModal('delete');
         }
 
-        function confirmDelete() {
+        async function confirmDelete() {
             if (!pendingDeleteId) return;
 
-            const data = loadData();
-            const transaction = data.transactions.find(t => t.id === pendingDeleteId);
-
-            if (transaction) {
-                // Reverse the balance change
-                data.balance -= transaction.amount;
-
-                // Remove transaction
-                data.transactions = data.transactions.filter(t => t.id !== pendingDeleteId);
-
-                // If it was a piano award, remove the weekly award too
-                if (transaction.type === 'piano' && transaction.amount > 0) {
-                    const weekStart = getWeekStart(transaction.date);
-                    data.weeklyAwards = data.weeklyAwards.filter(w => w.weekStart !== weekStart);
-                }
-
-                saveData(data);
-                updateUI();
+            try {
+                await fetch(`/api/transaction/${pendingDeleteId}`, {
+                    method: 'DELETE'
+                });
+                await updateUI();
                 showToast('Entry deleted');
+            } catch (err) {
+                console.error('Error deleting entry:', err);
+                showToast('Error deleting entry');
             }
 
             closeModal('delete');
@@ -1055,11 +998,16 @@
         }
 
         // Reset All Data
-        function confirmReset() {
-            localStorage.removeItem(STORAGE_KEY);
-            updateUI();
-            closeModal('reset');
-            showToast('All data has been reset');
+        async function confirmReset() {
+            try {
+                await fetch('/api/reset', { method: 'POST' });
+                await updateUI();
+                closeModal('reset');
+                showToast('All data has been reset');
+            } catch (err) {
+                console.error('Error resetting data:', err);
+                showToast('Error resetting data');
+            }
         }
 
         // Confetti Effect
